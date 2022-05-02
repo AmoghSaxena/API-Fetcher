@@ -9,10 +9,10 @@ from contextlib import contextmanager, redirect_stdout
 from io import StringIO
 
 st.set_page_config(  # Alternate names: setup_page, page, layout
-	layout="wide",  # Can be "centered" or "wide". In the future also "dashboard", etc.
-	initial_sidebar_state="auto",  # Can be "auto", "expanded", "collapsed"
-	page_title=None,  # String or None. Strings get appended with "• Streamlit".
-	page_icon=None,  # String, anything supported by st.image, or None.
+    layout="wide",  # Can be "centered" or "wide". In the future also "dashboard", etc.
+    initial_sidebar_state="auto",  # Can be "auto", "expanded", "collapsed"
+    page_title=None,  # String or None. Strings get appended with "• Streamlit".
+    page_icon=None,  # String, anything supported by st.image, or None.
 )
 hide_streamlit_style = """
             <style>
@@ -35,6 +35,8 @@ def run_and_display_stdout(command_args):
 
 shout = False
 IP_DVC = 1
+show_tiles = True
+
 
 @contextmanager
 def st_capture(output_func):
@@ -59,19 +61,18 @@ def auto_column_sort(column_number, row_data):
         column = column3
     elif column_number == 4:
         column = column4
-    elif column_number == 5:
-        column = column5
-
     with column:
-        expander = st.expander(f" CONTROLLER: {row_data[1]}")
-        expander.image("controller.png")
-        expander.write({'MAC ADDRESS': row_data[0], 'IP ADDRESS': row_data[1]})
-        expander.write("""Fill the data below if you want to run the Ansible job""")
-        if expander.checkbox(f"Install For {row_data[1]}"):
+        st.write(f" CONTROLLER: {row_data[1]}")
+        st.image("controller.png")
+        st.write({'Application Id': row_data[0], 'IP ADDRESS': row_data[1]})
+        st.write("""Fill the data below if you want to run the Ansible job""")
+        if st.checkbox(f"Install For {row_data[1]}"):
             global shout
             shout = True
             global IP_DVC
             IP_DVC = row_data[1]
+            global show_tiles
+            show_tiles = False
 
 
 def login_check():
@@ -93,39 +94,41 @@ def login_check():
 
 column_count = 1
 
-
 output = st.empty()
 
 ### Login CHeck ###
 
 if login_check() == True:
     if st.checkbox("Show Controllers"):
-        if st.button(f'Refresh Page'):
+        if st.button(f'Refresh Page', key='c'):
             with st.spinner('Wait for it...'):
                 time.sleep(2)
                 st.legacy_caching.clear_cache()
                 st.experimental_rerun()
             st.success('Done!')
-        column1, column2, column3, column4, column5 = st.columns(5)
-        with open('dvcsetups.csv', 'r') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                if row[0] != 'MAC':
-                    # st.write(column_count)
-                    # st.write(row)
-                    auto_column_sort(column_count, row)
-                    # st.write(row)
-                    column_count = 1 if column_count == 5 else (column_count + 1)
+        column1, column2, column3, column4 = st.columns(4)
+        if show_tiles:
+            with open('dvcsetups.csv', 'r') as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    if row[0] != 'MAC':
+                        auto_column_sort(column_count, row)
+                        column_count = 1 if column_count == 4 else (column_count + 1)
 
     if shout:
         st.header(f"Provide the Details for {IP_DVC}")
         CLOUD_URL = st.text_input("Cloud URL")
         CLOUD_IP = st.text_input("Cloud IP")
         CASA_VER = st.text_input("Casadigi Version")
-        if st.button('Install'):
+        if st.button('Install', key='e'):
             st.write('INSTALLING')
+            my_bar = st.progress(0)
+            for percent_complete in range(100):
+                time.sleep(0.01)
+                my_bar.progress(percent_complete + 1)
             run_and_display_stdout(["/usr/local/bin/casadigi-provisioning.sh", IP_DVC, CASA_VER, CLOUD_URL, CLOUD_IP])
             st.info("Executed!")
+
 
         else:
             st.write('IDLE')
