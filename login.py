@@ -1,12 +1,13 @@
-import streamlit as st
-import os
 import csv
 import time
+import json
+import hashlib
 import subprocess
-import streamlit as st
 import pandas as pd
-from contextlib import contextmanager, redirect_stdout
+import streamlit as st
 from io import StringIO
+from contextlib import contextmanager, redirect_stdout
+
 
 st.set_page_config(  # Alternate names: setup_page, page, layout
     layout="wide",  # Can be "centered" or "wide". In the future also "dashboard", etc.
@@ -22,6 +23,13 @@ hide_streamlit_style = """
             """
 
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+with open("creds.json", "r") as f:
+    conf = json.load(f)
+creds_read = conf
+
+
+
+####### PROGRAM STARTS HERE #######
 st.title("CASADIGI")
 
 
@@ -82,9 +90,15 @@ def login_check():
     if choice == "Login":
         username = st.sidebar.text_input("User Name")
         password = st.sidebar.text_input("Password", type='password')
+        login_password = hashlib.md5()
+        user = hashlib.md5()
+        login_password.update(password.encode('utf-8'))
+        user.update(username.encode('utf-8'))
         print(username, password)
         if st.sidebar.checkbox("Login"):
-            if username == "admin" and password == "admin":
+            print(user.hexdigest())
+            print(login_password.hexdigest())
+            if user.hexdigest() == creds_read['login_user'] and login_password.hexdigest() == creds_read['login_password']:
                 st.sidebar.success("Logged In as {}".format(username))
                 return True
             else:
